@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* * Overriding Vite's boilerplate styles 
+* We only keep the margin: 0; and set our custom dark theme background
+*/
