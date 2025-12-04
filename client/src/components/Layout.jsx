@@ -1,17 +1,24 @@
+import React from 'react';
 import Sidebar from './Sidebar';
+import Header from './Header'; // <-- שורה חדשה: מייבאים את הכותרת
 import { Outlet } from 'react-router-dom';
 
 const Layout = () => {
     return (
-        // Main container sets the dark background
-        <div className="min-h-screen bg-[#0e1a2b] flex">
+        // הגדרת כיוון RTL לכל האפליקציה
+        <div className="min-h-screen bg-[#0e1a2b] flex font-sans" dir="rtl">
             
-            {/* 1. Sidebar (fixed width) */}
+            {/* תפריט צד (קבוע) */}
             <Sidebar />
 
-            {/* 2. Main content area (pushes content away from the fixed sidebar) */}
+            {/* אזור התוכן המרכזי */}
+            {/* mr-56 נותן מרווח מצד ימין כדי שהתוכן לא יעלה על התפריט */}
             <main className="flex-grow mr-56 p-6">
-                {/* Outlet renders the specific child route (Home, Items, etc.) */}
+                
+                {/* כאן אנחנו שמים את הכותרת שיצרנו */}
+                <Header /> 
+                
+                {/* Outlet מציג את תוכן הדף הספציפי (דף הבית, פריטים וכו') */}
                 <Outlet />
             </main>
         </div>

@@ -137,7 +137,7 @@ const checkAndSendNotifications = async () => {
 };
 
 const startScheduler = () => {
-    cron.schedule('* * * * *', checkAndSendNotifications, {
+    cron.schedule('0 6 * * *', checkAndSendNotifications, {
         scheduled: true,
         timezone: "Asia/Jerusalem" 
     });

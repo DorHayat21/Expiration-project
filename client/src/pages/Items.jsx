@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaTrash, FaSearch, FaFilter, FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaBoxOpen } from 'react-icons/fa';
-import MainLayout from '../MainLayout';
+import { FaTrash, FaSearch, FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaBoxOpen } from 'react-icons/fa';
 
-// המילון שלך נשמר
+// מילון תרגום נושאים
 const TOPIC_TRANSLATIONS = {
-    'Car Service': 'טיפול רכב', 'Driving License': 'רישיון נהיגה', 'Regulators': 'ווסטים', 'Private Warehouse': 'מחסן פרטי', 'Tool Cabinet': 'ארון כלים', 'Accessory Bags': 'תיקי אביזר', 'RCD': 'מפסק פחת', 'Soldering Station': 'עמדת הלחמה', 'ESD Station': 'עמדת ESD', 'Hazmat Cabinet': 'ארון חומ"ס', 'Extinguishers': 'מטפים',
+    'Car Service': 'טיפול רכב', 
+    'Driving License': 'רישיון נהיגה', 
+    'Regulators': 'ווסטים', 
+    'Private Warehouse': 'מחסן פרטי', 
+    'Tool Cabinet': 'ארון כלים', 
+    'Accessory Bags': 'תיקי אביזר', 
+    'RCD': 'מפסק פחת', 
+    'Soldering Station': 'עמדת הלחמה', 
+    'ESD Station': 'עמדת ESD', 
+    'Hazmat Cabinet': 'ארון חומ"ס', 
+    'Extinguishers': 'מטפים',
 };
 
 const Items = () => {
-    // --- אותה לוגיקה בדיוק ---
+    // --- State Management ---
     const [assets, setAssets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -19,37 +28,57 @@ const Items = () => {
     const fetchAssets = async () => {
         const token = localStorage.getItem('userToken') || localStorage.getItem('adminToken');
         if (!token) return window.location.href = '/login';
+        
         try {
             setIsLoading(true);
-            const res = await axios.get('/api/assets', { headers: { Authorization: `Bearer ${token}` } });
+            const res = await axios.get('http://localhost:5000/api/assets', { headers: { Authorization: `Bearer ${token}` } });
             setAssets(res.data); 
-        } catch (err) { setError('שגיאה בטעינת נתונים'); } finally { setIsLoading(false); }
+        } catch (err) { 
+            setError('שגיאה בטעינת נתונים'); 
+            console.error(err);
+        } finally { 
+            setIsLoading(false); 
+        }
     };
 
     const handleDelete = async (assetId) => {
         if (!window.confirm("למחוק את הפריט?")) return;
         const token = localStorage.getItem('userToken') || localStorage.getItem('adminToken');
         try {
-            await axios.delete(`/api/assets/${assetId}`, { headers: { Authorization: `Bearer ${token}` } });
+            await axios.delete(`http://localhost:5000/api/assets/${assetId}`, { headers: { Authorization: `Bearer ${token}` } });
             fetchAssets(); 
-        } catch (err) { alert("שגיאה במחיקה: " + (err.response?.data?.message || err.message)); }
+        } catch (err) { 
+            alert("שגיאה במחיקה: " + (err.response?.data?.message || err.message)); 
+        }
     };
 
     useEffect(() => { fetchAssets(); }, []); 
 
-    // עיצוב הסטטוסים עודכן ל"תגים" יפים
-    const getStatusInfo = (expiryDate) => {
+    // --- התיקון המרכזי כאן ---
+    // הפונקציה מקבלת עכשיו גם את totalDuration (ימי הנוהל)
+    const getStatusInfo = (expiryDate, totalDuration = 365) => {
         const diff = new Date(expiryDate) - new Date();
         const days = Math.ceil(diff / (1000 * 3600 * 24));
         
+        // קביעת סף ההתראה (צהוב)
+        // אם הנוהל הוא קצר (30 יום ומטה) -> נתריע רק ב-3 ימים האחרונים
+        // אם הנוהל ארוך -> נתריע ב-7 ימים האחרונים (אפשר לשנות ל-30 אם תרצי)
+        const alertThreshold = totalDuration <= 30 ? 3 : 7; 
+
         if (days <= 0) return { bg: 'bg-red-500/20 text-red-300 border-red-500/50', icon: <FaTimesCircle/>, text: 'פג תוקף', statusKey: 'EXPIRED', days };
-        if (days <= 30) return { bg: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50', icon: <FaExclamationTriangle/>, text: 'עומד לפוג', statusKey: 'EXPIRING_SOON', days };
+        
+        // שימוש בסף הדינמי שחישבנו
+        if (days <= alertThreshold) return { bg: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50', icon: <FaExclamationTriangle/>, text: 'עומד לפוג', statusKey: 'EXPIRING_SOON', days };
+        
         return { bg: 'bg-green-500/20 text-green-300 border-green-500/50', icon: <FaCheckCircle/>, text: 'תקף', statusKey: 'VALID', days }; 
     };
 
+    // סינון פריטים
     const filteredAssets = assets.filter(asset => {
         if (!asset.catalogId || !asset.assignedTo) return false;
-        const status = getStatusInfo(asset.expirationDate);
+        
+        // עדכון הקריאה לפונקציה גם כאן כדי שהפילטר יעבוד נכון
+        const status = getStatusInfo(asset.expirationDate, asset.catalogId?.defaultExpirationDays);
         const searchStr = `${asset.companyAssetId} ${asset.catalogId?.topic} ${asset.department} ${asset.assignedTo?.email}`.toLowerCase();
         
         if (statusFilter !== 'ALL' && status.statusKey !== statusFilter) return false;
@@ -57,9 +86,9 @@ const Items = () => {
         return true;
     });
 
-    // --- ה-HTML החדש (העיצוב) ---
+    // --- רינדור הדף (ללא MainLayout) ---
     return (
-        <MainLayout>
+        <div className="animate-fade-in-up">
             
             {/* כותרת ופילטרים */}
             <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
@@ -90,7 +119,7 @@ const Items = () => {
                 </div>
             </div>
 
-            {/* הטבלה החדשה */}
+            {/* טבלה */}
             <div className="bg-[#162b4d]/80 backdrop-blur-xl rounded-2xl border border-[#1f3c73] shadow-2xl overflow-hidden">
                 <table className="w-full text-right border-collapse">
                     <thead className="bg-[#0e1a2b]/90 text-gray-400 text-xs uppercase font-bold tracking-wider">
@@ -115,7 +144,8 @@ const Items = () => {
                             <tr><td colSpan="9" className="p-12 text-center text-gray-500">לא נמצאו פריטים.</td></tr>
                         ) : (
                             filteredAssets.map(asset => {
-                                const status = getStatusInfo(asset.expirationDate);
+                                // עדכון הקריאה לפונקציה כאן - מעבירים גם את הנוהל
+                                const status = getStatusInfo(asset.expirationDate, asset.catalogId.defaultExpirationDays);
                                 return (
                                     <tr key={asset._id} className="hover:bg-[#1f3c73]/40 transition duration-200">
                                         <td className="p-4">
@@ -148,7 +178,7 @@ const Items = () => {
                     </tbody>
                 </table>
             </div>
-        </MainLayout>
+        </div>
     );
 };
 

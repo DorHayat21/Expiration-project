@@ -1,11 +1,11 @@
-import React from 'react'; // Retained for compiler compatibility
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-// Define navigation items with Hebrew names and paths
 const navItems = [
     { name: 'דף הבית', path: '/', icon: '🏠' },
     { name: 'פריטים', path: '/items', icon: '📝' },
-    { name: 'כללים', path: '/catalog', icon: '📜' },
+    // התיקון כאן: שיניתי את הנתיב ל-/rules
+    { name: 'כללים', path: '/rules', icon: '📜' }, 
     { name: 'התראות', path: '/alerts', icon: '⚠️' },
     { name: 'הגדרות', path: '/settings', icon: '⚙️' },
 ];
@@ -13,53 +13,49 @@ const navItems = [
 const Sidebar = () => {
     const location = useLocation();
 
-    // Logic to handle logout: remove token and redirect to login
     const handleLogout = () => {
-        // Remove both user and admin tokens to ensure full log out
         localStorage.removeItem('userToken');
         localStorage.removeItem('adminToken');
-        // Redirect to the public login page
+        localStorage.removeItem('userRole'); // מנקים גם את התפקיד
         window.location.href = '/login';
     };
 
     return (
-        // CRITICAL: Fixed positioning, dark background, and z-index to be on top
-        <div className="fixed top-0 right-0 h-full w-56 bg-[#102542] border-l border-[#1f3c73] p-4 text-white shadow-2xl z-10">
+        <div className="fixed top-0 right-0 h-full w-64 bg-[#102542] border-l border-[#1f3c73] text-white shadow-2xl z-20 flex flex-col">
             
-            {/* Logo and Project Name Placeholder */}
-            <div className="flex flex-col items-center pb-6 border-b border-gray-600/50">
-                <h1 className="text-xl font-extrabold tracking-wider text-cyan-400">
+            {/* 1. לוגו וכותרת */}
+            <div className="flex flex-col items-center pt-8 pb-6 border-b border-gray-600/50 mx-4">
+                <h1 className="text-2xl font-extrabold tracking-wider text-cyan-400 drop-shadow-md">
                     ExpiryTrack
                 </h1>
                 <p className="text-xs mt-1 text-gray-400">פרויקט פגי תוקף 2026</p>
             </div>
 
-            {/* Navigation Links (map iterates over the defined array) */}
-            <nav className="mt-8 space-y-2">
+            {/* 2. תפריט ניווט */}
+            <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
                 {navItems.map((item) => (
                     <Link
                         key={item.name}
                         to={item.path}
-                        // Styling the active link based on current path
-                        className={`flex items-center p-3 rounded-lg text-sm transition-colors duration-200 
+                        className={`flex items-center p-3 rounded-lg text-sm transition-all duration-200 group
                             ${location.pathname === item.path 
-                                ? 'bg-[#1b3c66] text-white font-semibold' 
-                                : 'text-gray-300 hover:bg-[#1f3c73] hover:text-white'
+                                ? 'bg-gradient-to-r from-[#1b3c66] to-[#254e85] text-white font-bold shadow-lg border-r-4 border-cyan-400' 
+                                : 'text-gray-300 hover:bg-[#1f3c73]/50 hover:text-white'
                             }`}
                     >
-                        <span className="ml-3 text-lg">{item.icon}</span>
+                        <span className="ml-3 text-lg group-hover:scale-110 transition-transform">{item.icon}</span>
                         <span>{item.name}</span>
                     </Link>
                 ))}
             </nav>
 
-            {/* Logout Button (Fixed at the bottom) */}
-            <div className="absolute bottom-4 w-full pr-8">
+            {/* 3. כפתור התנתקות */}
+            <div className="p-4 border-t border-gray-600/50 bg-[#0d1f38]">
                 <button 
                     onClick={handleLogout}
-                    className="w-full flex items-center p-3 rounded-lg text-sm text-gray-300 bg-red-800/10 hover:bg-red-800/30 transition-colors duration-200"
+                    className="w-full flex items-center justify-center p-3 rounded-lg text-sm font-bold text-red-200 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 transition-all duration-200 shadow-inner"
                 >
-                    <span className="ml-3">🚪</span>
+                    <span className="ml-2">🚪</span>
                     <span>התנתקות</span>
                 </button>
             </div>
