@@ -1,14 +1,11 @@
 import Asset from '../models/Asset.model.js';
 import Catalog from '../models/Catalog.model.js';
-// ✅ ייבוא: ודא שפונקציית המייל מיובאת!
 import { sendEmail } from '../services/notificationService.js'; 
 
-// *** מילון התרגום שחסר (חובה עבור שליחת המייל) ***
+// מילון התרגום עבור המיילים
 const TOPIC_TRANSLATIONS = {
     'Car Service': 'טיפול רכב', 'Driving License': 'רישיון נהיגה', 'Regulators': 'ווסטים', 'Private Warehouse': 'מחסן פרטי', 'Tool Cabinet': 'ארון כלים', 'Accessory Bags': 'תיקי אביזר', 'RCD': 'מפסק פחת', 'Soldering Station': 'עמדת הלחמה', 'ESD Station': 'עמדת ESD', 'Hazmat Cabinet': 'ארון חומ"ס', 'Extinguishers': 'מטפים',
 };
-// ----------------------------------------------------
-
 
 // Utility function to calculate the expiration date
 const calculateExpiryDate = (inspectionDate, defaultDays) => {
@@ -21,13 +18,17 @@ const calculateExpiryDate = (inspectionDate, defaultDays) => {
 // @route   POST /api/assets
 // @access  Private (User, SuperViewer, Admin)
 const createAsset = async (req, res) => {
+    // 1. קבלת הנתונים מהבקשה (הוספנו את gaf, הורדנו את squadNumber)
     const { 
         companyAssetId, serialNumber, catalogId, 
-        lastInspectionDate, department, squadNumber 
+        lastInspectionDate, 
+        gaf,         // שדה חדש
+        department   // שדה קיים
     } = req.body;
 
-    if (!companyAssetId || !catalogId || !lastInspectionDate || !department) {
-        return res.status(400).json({ message: 'Please include all required asset fields.' });
+    // 2. בדיקת תקינות (Validation) - הוספנו בדיקה ל-gaf
+    if (!companyAssetId || !catalogId || !lastInspectionDate || !department || !gaf) {
+        return res.status(400).json({ message: 'Please include all required asset fields (including Gaf and Department).' });
     }
 
     try {
@@ -41,13 +42,19 @@ const createAsset = async (req, res) => {
             catalogRule.defaultExpirationDays
         );
 
+        // 3. יצירת הפריט במסד הנתונים
         const asset = await Asset.create({
-            companyAssetId, serialNumber, catalogId,
-            lastInspectionDate, expirationDate, department, squadNumber,
+            companyAssetId, 
+            serialNumber, 
+            catalogId,
+            lastInspectionDate, 
+            expirationDate, 
+            gaf,        // שמירת הגף
+            department, // שמירת המחלקה
             assignedTo: req.user._id,
         });
 
-        // ✅ שליחת מייל אישור מיידי (מוגן ב-catch כדי לא לגרום לקריסה)
+        // ✅ שליחת מייל אישור
         const topicHebrew = TOPIC_TRANSLATIONS[catalogRule.topic] || catalogRule.topic;
         const subject = `[אישור] נכס חדש #${asset.companyAssetId} נוצר בהצלחה`;
         const body = 
@@ -55,6 +62,8 @@ const createAsset = async (req, res) => {
             `הפריט הבא נוצר על ידך במערכת:\n` +
             `פריט: ${topicHebrew}\n` +
             `מסח"א: ${asset.companyAssetId}\n` +
+            `גף: ${gaf}\n` +      // הוספתי למייל
+            `מחלקה: ${department}\n` + // הוספתי למייל
             `תאריך פ"ת: ${new Date(asset.expirationDate).toLocaleDateString('he-IL')}\n\n` +
             `המערכת תשלח התראות לפני פג תוקף.\n\n` +
             `בברכה,\nExpiryTrack System`;
@@ -99,7 +108,6 @@ const getAssets = async (req, res) => {
 // @route   PUT /api/assets/:id
 // @access  Private (Role-dependent)
 const updateAsset = async (req, res) => {
-    // ⚠️ הערה: פונקציה זו אינה בשימוש כעת (הסרנו את נתיב ה-PUT)
     try {
         const { lastInspectionDate, catalogId } = req.body;
         
@@ -108,6 +116,7 @@ const updateAsset = async (req, res) => {
         delete updateFields.assignedTo; 
         delete updateFields.expirationDate; 
         
+        // עדכון תאריך תפוגה אם שונה תאריך בדיקה או קטלוג
         if (lastInspectionDate || catalogId) {
             const currentAsset = await Asset.findById(req.params.id);
             if (!currentAsset) {

@@ -41,15 +41,17 @@ const AssetSchema = new mongoose.Schema({
     },
 
     // --- Location & Metadata ---
-    department: {
+    gaf: { // NEW FIELD: גף (e.g. אלקטרואופטיקה)
         type: String,
-        required: true,
+        required: [true, 'Gaf is required'],
         trim: true,
     },
-    squadNumber: { // מספר חוליה (Team/Squad number)
+    department: { // SECOND LEVEL: מחלקה (e.g. מסק"ר)
         type: String,
+        required: [true, 'Department is required'],
         trim: true,
     },
+    // REMOVED: squadNumber
 }, {
     timestamps: true
 });

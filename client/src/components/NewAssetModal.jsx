@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// --- מילונים לתרגום ערכים לעברית ---
+// --- הגדרת המבנה הארגוני (היררכיה) ---
+const ORG_STRUCTURE = {
+    'אלקטרואופטיקה': ['מסק"ר', 'מאו"ר', 'מרכז לייזר', 'חווטות וסיבים'],
+    'הגנה אווירית': ['מערכות הגנ"א', 'מבדקים', 'שכבה תחתונה', 'TRMC'],
+    'נשק מונחה': ['הנדסת ניסויים ותאלמ"ג', 'אוויר - קרקע', 'אוויר - אוויר'],
+    'לות"ם': ['מחסן מרכזי', 'מצ"מ', 'שליטה']
+};
 
-// תרגום קטגוריות ראשיות (Domains)
+// --- מילונים לתרגום ערכים לעברית ---
 const DOMAIN_TRANSLATIONS = {
     'SAFETY': 'בטיחות',
     'DRIVING': 'נהיגה',
@@ -12,7 +18,6 @@ const DOMAIN_TRANSLATIONS = {
     'QUALITY': 'איכות',
 };
 
-// תרגום נושאים (Topics)
 const TOPIC_TRANSLATIONS = {
     'Car Service': 'טיפול רכב',
     'Driving License': 'רישיון נהיגה',
@@ -41,8 +46,9 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
         domain: '',
         catalogId: '',
         lastInspectionDate: '',
-        department: '',
-        squadNumber: '',
+        gaf: '',         // שדה חדש: גף
+        department: '',  // שדה קיים אך כעת הוא בחירה מרשימה
+        // squadNumber - נמחק
     });
     
     const [catalogRules, setCatalogRules] = useState([]);
@@ -71,7 +77,7 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
         fetchRules();
     }, []);
 
-    // 2. סינון נושאים לפי בחירת תחום (Cascading Dropdown)
+    // 2. סינון נושאים לפי בחירת תחום
     useEffect(() => {
         if (formData.domain) {
             const filteredTopics = catalogRules.filter(
@@ -85,11 +91,20 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
     }, [formData.domain, catalogRules]);
 
 
-    // עדכון שדות הקלט
+    // עדכון שדות הקלט (כללי)
     const onChange = (e) => {
         setFormData(prev => ({
             ...prev,
             [e.target.name]: e.target.value,
+        }));
+    };
+
+    // טיפול ספציפי בשינוי גף (מאפס את המחלקה)
+    const handleGafChange = (e) => {
+        setFormData(prev => ({
+            ...prev,
+            gaf: e.target.value,
+            department: '' // איפוס מחלקה כשהגף משתנה
         }));
     };
     
@@ -106,9 +121,14 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
              return;
         }
         
+        // הכנת הנתונים לשליחה (כולל חישוב תאריך תפוגה שנעשה בשרת בד"כ, או שליחת הנתונים הגולמיים)
         const assetData = { 
-            ...formData, 
-            catalogId: formData.catalogId, 
+            companyAssetId: formData.companyAssetId,
+            serialNumber: formData.serialNumber,
+            catalogId: formData.catalogId,
+            lastInspectionDate: formData.lastInspectionDate,
+            gaf: formData.gaf,              // שולחים גף
+            department: formData.department // שולחים מחלקה
         };
         
         try {
@@ -150,15 +170,16 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
                 <form onSubmit={onSubmit} className="space-y-4 text-right" dir="rtl">
                     
                     {/* מסח"א ומספר סידורי */}
-                    <input
-                        type="text" name="companyAssetId" placeholder="מספר זיהוי (מסח''א)" onChange={onChange} required
-                        className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
-                    />
-                    
-                    <input
-                        type="text" name="serialNumber" placeholder="מספר סידורי" onChange={onChange}
-                        className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <input
+                            type="text" name="companyAssetId" placeholder="מספר זיהוי (מסח''א)" onChange={onChange} required
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
+                        />
+                        <input
+                            type="text" name="serialNumber" placeholder="מספר סידורי" onChange={onChange}
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
+                        />
+                    </div>
 
                     {/* בחירת תחום ונושא */}
                     <div className="grid grid-cols-2 gap-4">
@@ -183,7 +204,39 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
                         </select>
                     </div>
 
-                    {/* תאריך בדיקה - עם נסיון לפורמט עברי */}
+                    {/* בחירת גף ומחלקה (החלק החדש) */}
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* גף */}
+                        <select 
+                            name="gaf" 
+                            onChange={handleGafChange} 
+                            required 
+                            value={formData.gaf}
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 focus:border-cyan-400 focus:outline-none transition"
+                        >
+                            <option value="">בחר גף:</option>
+                            {Object.keys(ORG_STRUCTURE).map(gaf => (
+                                <option key={gaf} value={gaf}>{gaf}</option>
+                            ))}
+                        </select>
+
+                        {/* מחלקה (תלוי בגף) */}
+                        <select 
+                            name="department" 
+                            onChange={onChange} 
+                            required 
+                            value={formData.department}
+                            disabled={!formData.gaf}
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 disabled:opacity-50 focus:border-cyan-400 focus:outline-none transition"
+                        >
+                            <option value="">{formData.gaf ? 'בחר מחלקה:' : 'קודם בחר גף'}</option>
+                            {formData.gaf && ORG_STRUCTURE[formData.gaf].map(dept => (
+                                <option key={dept} value={dept}>{dept}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* תאריך בדיקה */}
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">תאריך ביצוע בדיקה</label>
                         <input
@@ -191,25 +244,11 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
                             name="lastInspectionDate" 
                             onChange={onChange} 
                             required
-                            lang="he" // שינוי לעברית
-                            style={{ colorScheme: 'dark' }} // לוח שנה כהה
+                            style={{ colorScheme: 'dark' }}
                             className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 focus:border-cyan-400 focus:outline-none transition cursor-pointer"
                         />
-                        <p className="text-[10px] text-gray-500 mt-1 pr-1">* סדר התצוגה (יום/חודש) תלוי בהגדרות המחשב שלך</p>
                     </div>
                     
-                    {/* מחלקה וחוליה */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <input
-                            type="text" name="department" placeholder="מחלקה" onChange={onChange} required
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none transition"
-                        />
-                        <input
-                            type="text" name="squadNumber" placeholder="מספר חולייה" onChange={onChange}
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none transition"
-                        />
-                    </div>
-
                     {/* כפתורים */}
                     <div className="flex justify-end gap-4 pt-6 border-t border-gray-700/50 mt-4">
                         <button type="button" onClick={onClose} className="py-2 px-6 rounded-lg text-gray-300 bg-gray-700 hover:bg-gray-600 transition duration-200">

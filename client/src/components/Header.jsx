@@ -9,7 +9,7 @@ const Header = () => {
         const role = localStorage.getItem('userRole');
         
         // 2. קביעת הטקסט להצגה לפי התפקיד
-        if (role === 'admin') {
+        if (role === 'Admin') {
             setRoleText('מנהל מערכת');
         } else if (role === 'SuperViewer') {
             setRoleText('צופה על'); // <-- התיקון שביקשת
