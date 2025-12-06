@@ -1,23 +1,36 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { FaHome, FaClipboardList, FaScroll, FaChartPie, FaCog, FaSignOutAlt } from 'react-icons/fa'; 
 
 const navItems = [
-    { name: 'דף הבית', path: '/', icon: '🏠' },
-    { name: 'פריטים', path: '/items', icon: '📝' },
-    // התיקון כאן: שיניתי את הנתיב ל-/rules
-    { name: 'כללים', path: '/rules', icon: '📜' }, 
-    { name: 'התראות', path: '/alerts', icon: '⚠️' },
-    { name: 'הגדרות', path: '/settings', icon: '⚙️' },
+    { name: 'דף הבית', path: '/', icon: <FaHome /> },
+    { name: 'פריטים', path: '/items', icon: <FaClipboardList /> },
+    { name: 'כללים', path: '/rules', icon: <FaScroll /> },
+    { name: 'תצוגה גרפית', path: '/dashboard', icon: <FaChartPie /> }, 
+    { name: 'הגדרות', path: '/settings', icon: <FaCog /> },
 ];
 
 const Sidebar = () => {
     const location = useLocation();
 
     const handleLogout = () => {
-        localStorage.removeItem('userToken');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('userRole'); // מנקים גם את התפקיד
-        window.location.href = '/login';
+        // שואלים את המשתמש אם הוא בטוח
+        if (window.confirm("האם אתה בטוח שברצונך להתנתק?")) {
+            
+            // 1. מחיקת נתוני התחברות (מה שהיה לך קודם)
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('userRole');
+
+            // 2. --- התיקון: מחיקת פרטים אישיים כדי שלא יעברו למשתמש הבא ---
+            localStorage.removeItem('firstName');
+            localStorage.removeItem('lastName');
+            localStorage.removeItem('username'); // ליתר ביטחון
+            localStorage.removeItem('customRole');
+
+            // 3. מעבר לדף התחברות
+            window.location.href = '/login';
+        }
     };
 
     return (
@@ -55,7 +68,7 @@ const Sidebar = () => {
                     onClick={handleLogout}
                     className="w-full flex items-center justify-center p-3 rounded-lg text-sm font-bold text-red-200 bg-red-900/20 hover:bg-red-900/40 border border-red-900/50 transition-all duration-200 shadow-inner"
                 >
-                    <span className="ml-2">🚪</span>
+                    <span className="ml-2"><FaSignOutAlt /></span>
                     <span>התנתקות</span>
                 </button>
             </div>

@@ -1,13 +1,10 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs'; 
-// CRITICAL: Must use .js extension for local imports in ES Modules
 import User from './models/User.model.js'; 
 
-// Load environment variables from the .env file
 dotenv.config(); 
 
-// Function to connect to MongoDB
 const connectDB = async () => {
     try {
         const conn = await mongoose.connect(process.env.MONGO_URI);
@@ -18,33 +15,77 @@ const connectDB = async () => {
     }
 };
 
-// Function to create users in bulk
 const seedUsers = async () => {
     
-    // 1. Define 3 key users (Admin, SuperViewer, User)
+    // הגדרת משתמשים עם תפקידים ושיוכים לגפים/מחלקות
     const initialUsers = [
-        { email: 'dorhayat14@gmail.com', password: '123', role: 'Admin' }, 
-        { email: 'dorhayat1@gmail.com', password: '123', role: 'SuperViewer' }, 
-        { email: 'dorhayat99@gmail.com', password: '123', role: 'User' }, 
+        { 
+            email: 'dorhayat14@gmail.com', 
+            password: '123', 
+            role: 'Admin',
+            gaf: '',        // אדמין לא צריך שיוך
+            department: '' 
+        }, 
+        { 
+            email: 'eyal@gmail.com', 
+            password: '123', 
+            role: 'SuperViewer', // מפקד גף
+            gaf: 'אלקטרואופטיקה', // רואה את כל המחלקות תחת הגף הזה
+            department: ''       // לא מוגבל למחלקה ספציפית
+        }, 
+        { 
+            email: 'perah@gmail.com', 
+            password: '123', 
+            role: 'SuperViewer', // מפקדת יחידה
+            gaf: '', // רואה את כל המחלקות   
+            department: ''       // לא מוגבל למחלקה ספציפית
+        }, 
+        { 
+            email: 'moshe@gmail.com', 
+            password: '123', 
+            role: 'User',        // מפקד מחלקה
+            gaf: 'אלקטרואופטיקה',
+            department: 'מסק"ר' // רואה רק פריטים של מסק"ר
+        }, 
+        { 
+            email: 'yahav@gmail.com', 
+            password: '123', 
+            role: 'User',        // מפקד 
+            gaf: 'אלקטרואופטיקה',
+            department: 'מסק"ר' // רואה רק פריטים של מסק"ר
+        }, 
+        { 
+            email: 'or@gmail.com', 
+            password: '123', 
+            role: 'User',        // מפקד מחלקה
+            gaf: 'אלקטרואופטיקה',
+            department: 'מסק"ר' // רואה רק פריטים של מסק"ר
+        }, 
+        { 
+            email: 'sidi@gmail.com', 
+            password: '123', 
+            role: 'User',        // 
+            gaf: 'אלקטרואופטיקה',
+            department: 'מרכז לייזר' // רואה רק פריטים של מרכז לייזר
+        }, 
+        { 
+            email: 'roi@gmail.com', 
+            password: '123', 
+            role: 'User',        // משתמש
+            gaf: 'הגנה אווירית',
+            department: 'TRMC' // רואה רק פריטים של TRMC
+        }, 
     ];
 
-    // 2. Create 7 additional regular employee users (10 total)
-    const NUM_EMPLOYEES = 7;
-    for (let i = 1; i <= NUM_EMPLOYEES; i++) {
-        initialUsers.push({
-            email: `employee${i}@company.com`,
-            password: '123', 
-            role: 'User' 
-        });
-    }
+    
     
     try {
-        // Delete all existing users before seeding
+        // מחיקת משתמשים קיימים
         await User.deleteMany(); 
         console.log('Existing users deleted.');
 
         const usersToCreate = [];
-        // Hash the password for each user
+        
         for (const user of initialUsers) {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(user.password, salt);
@@ -55,7 +96,7 @@ const seedUsers = async () => {
             });
         }
 
-        // Insert all 10 users
+        // הכנסת המשתמשים החדשים למסד הנתונים
         await User.insertMany(usersToCreate);
         console.log(`Successfully added ${usersToCreate.length} users to the database!`);
         process.exit(0); 
@@ -66,6 +107,4 @@ const seedUsers = async () => {
     }
 };
 
-// Start the process
 connectDB().then(seedUsers);
-

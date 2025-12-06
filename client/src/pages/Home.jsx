@@ -33,6 +33,9 @@ const Home = () => {
     const [error, setError] = useState(null);
     const [showModal, setShowModal] = useState(false);
 
+    // שליפת התפקיד מה-localStorage כדי לדעת אם להציג את הכפתור
+    const userRole = localStorage.getItem('userRole');
+
     // --- Fetch Logic ---
     const fetchAssets = async () => {
         const token = localStorage.getItem('userToken') || localStorage.getItem('adminToken');
@@ -91,12 +94,15 @@ const Home = () => {
                     <p className="text-slate-400 text-lg">סקירה כללית של פריטים ותוקף</p>
                 </div>
 
-                <button 
-                    onClick={() => setShowModal(true)} 
-                    className="flex items-center gap-2 py-3 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-full font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-1"
-                >
-                    <FaPlus /> יצירת פריט חדש
-                </button>
+                {/* --- התיקון כאן: הכפתור מופיע רק אם המשתמש הוא לא SuperViewer --- */}
+                {userRole !== 'SuperViewer' && (
+                    <button 
+                        onClick={() => setShowModal(true)} 
+                        className="flex items-center gap-2 py-3 px-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-full font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-1"
+                    >
+                        <FaPlus /> יצירת פריט חדש
+                    </button>
+                )}
             </div>
 
             {/* איזור טעינה / שגיאה */}
@@ -148,7 +154,7 @@ const Home = () => {
                 </>
             )}
 
-            {/* מודל יצירת פריט */}
+            {/* מודל יצירת פריט - מופיע רק אם showModal הוא true */}
             {showModal && (
                 <NewAssetModal 
                     onClose={() => setShowModal(false)}

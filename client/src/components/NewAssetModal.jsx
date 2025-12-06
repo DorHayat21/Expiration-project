@@ -32,6 +32,21 @@ const TOPIC_TRANSLATIONS = {
     'Extinguishers': 'מטפים',
 };
 
+// --- פונקציית עזר לפענוח הטוקן (גרסה תומכת עברית!) ---
+const parseJwt = (token) => {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+};
+
 // פונקציית עזר לשליפת הטוקן
 const getAuthToken = () => {
     return localStorage.getItem('adminToken') || localStorage.getItem('userToken');
@@ -46,20 +61,39 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
         domain: '',
         catalogId: '',
         lastInspectionDate: '',
-        gaf: '',         // שדה חדש: גף
-        department: '',  // שדה קיים אך כעת הוא בחירה מרשימה
-        // squadNumber - נמחק
+        gaf: '',        
+        department: '',  
     });
     
     const [catalogRules, setCatalogRules] = useState([]);
     const [availableTopics, setAvailableTopics] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    
+    // משתנה לניהול הרשאות
+    const [isRestrictedUser, setIsRestrictedUser] = useState(false);
 
-    // 1. טעינת חוקי הקטלוג בטעינה ראשונית
+    // 1. טעינת נתונים ראשונית (חוקים + זיהוי משתמש)
     useEffect(() => {
+        const token = getAuthToken(); 
+        
+        // א. זיהוי המשתמש והגדרת ברירות מחדל
+        if (token) {
+            const userData = parseJwt(token);
+            // בדיקה אם המשתמש הוא User רגיל
+            if (userData && userData.role === 'User') {
+                setIsRestrictedUser(true);
+                // עדכון הנתונים בטופס אוטומטית לפי הטוקן
+                setFormData(prev => ({
+                    ...prev,
+                    gaf: userData.gaf || '',
+                    department: userData.department || ''
+                }));
+            }
+        }
+
+        // ב. שליפת חוקי קטלוג
         const fetchRules = async () => {
-            const token = getAuthToken(); 
             if (!token) {
                  setError('שגיאת אימות: אנא התחבר מחדש.');
                  return;
@@ -99,7 +133,7 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
         }));
     };
 
-    // טיפול ספציפי בשינוי גף (מאפס את המחלקה)
+    // טיפול ספציפי בשינוי גף (רלוונטי רק למנהלים שיכולים לשנות)
     const handleGafChange = (e) => {
         setFormData(prev => ({
             ...prev,
@@ -108,27 +142,21 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
         }));
     };
     
-    // 3. שליחת הטופס (יצירת הפריט)
+    // 3. שליחת הטופס
     const onSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
         
         const token = getAuthToken();
-        if (!token) {
-             setError('שגיאת אימות. נא להתחבר מחדש.');
-             setIsLoading(false);
-             return;
-        }
         
-        // הכנת הנתונים לשליחה (כולל חישוב תאריך תפוגה שנעשה בשרת בד"כ, או שליחת הנתונים הגולמיים)
         const assetData = { 
             companyAssetId: formData.companyAssetId,
             serialNumber: formData.serialNumber,
             catalogId: formData.catalogId,
             lastInspectionDate: formData.lastInspectionDate,
-            gaf: formData.gaf,              // שולחים גף
-            department: formData.department // שולחים מחלקה
+            gaf: formData.gaf,
+            department: formData.department
         };
         
         try {
@@ -148,7 +176,7 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
         }
     };
 
-    // רשימת תחומים ייחודיים ל-Select הראשון
+    // רשימת תחומים ייחודיים
     const uniqueDomains = [...new Set(catalogRules.map(rule => rule.domain))];
 
     return (
@@ -169,22 +197,22 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
 
                 <form onSubmit={onSubmit} className="space-y-4 text-right" dir="rtl">
                     
-                    {/* מסח"א ומספר סידורי */}
+                    {/* שדות זיהוי */}
                     <div className="grid grid-cols-2 gap-4">
                         <input
                             type="text" name="companyAssetId" placeholder="מספר זיהוי (מסח''א)" onChange={onChange} required
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none"
                         />
                         <input
                             type="text" name="serialNumber" placeholder="מספר סידורי" onChange={onChange}
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition"
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 placeholder-gray-400 focus:border-cyan-400 focus:outline-none"
                         />
                     </div>
 
                     {/* בחירת תחום ונושא */}
                     <div className="grid grid-cols-2 gap-4">
                         <select name="domain" onChange={onChange} required value={formData.domain}
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 focus:border-cyan-400 focus:outline-none transition"
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 focus:border-cyan-400 focus:outline-none"
                         >
                             <option value="">בחר תחום:</option>
                             {uniqueDomains.map(d => (
@@ -193,47 +221,73 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
                         </select>
                         
                         <select name="catalogId" onChange={onChange} required value={formData.catalogId} disabled={!formData.domain}
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 disabled:opacity-50 focus:border-cyan-400 focus:outline-none transition"
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 disabled:opacity-50 focus:border-cyan-400 focus:outline-none"
                         >
-                            <option value="">בחר נושא:</option>
+                            <option value="">{formData.domain ? 'בחר נושא:' : 'קודם בחר תחום'}</option>
                             {availableTopics.map(t => (
                                 <option key={t._id} value={t._id}>
-                                    {TOPIC_TRANSLATIONS[t.topic] || t.topic} (תוקף: {t.defaultExpirationDays} ימים)
+                                    {TOPIC_TRANSLATIONS[t.topic] || t.topic} ({t.defaultExpirationDays} ימים)
                                 </option>
                             ))}
                         </select>
                     </div>
 
-                    {/* בחירת גף ומחלקה (החלק החדש) */}
+                    {/* --- אזור הגף והמחלקה (עם כותרות קבועות) --- */}
                     <div className="grid grid-cols-2 gap-4">
-                        {/* גף */}
-                        <select 
-                            name="gaf" 
-                            onChange={handleGafChange} 
-                            required 
-                            value={formData.gaf}
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 focus:border-cyan-400 focus:outline-none transition"
-                        >
-                            <option value="">בחר גף:</option>
-                            {Object.keys(ORG_STRUCTURE).map(gaf => (
-                                <option key={gaf} value={gaf}>{gaf}</option>
-                            ))}
-                        </select>
+                        
+                        {/* תצוגת גף */}
+                        {isRestrictedUser ? (
+                            // למשתמש מוגבל - נציג אינפוט רגיל ונעול
+                            <div className="relative">
+                                {/* תווית צפה מעל השדה */}
+                                <div className="absolute -top-2.5 right-2 bg-[#162b4d] px-1.5 text-xs font-bold text-cyan-400 z-10">
+                                    גף
+                                </div>
+                                <input 
+                                    type="text" 
+                                    value={formData.gaf} 
+                                    disabled 
+                                    className="w-full px-4 py-3 bg-[#0e1a2b]/50 text-gray-300 rounded-lg border border-gray-600/50 cursor-not-allowed font-medium"
+                                />
+                            </div>
+                        ) : (
+                            // למנהל - נציג בחירה
+                            <select name="gaf" onChange={handleGafChange} required value={formData.gaf}
+                                className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 focus:border-cyan-400 focus:outline-none"
+                            >
+                                <option value="">בחר גף:</option>
+                                {Object.keys(ORG_STRUCTURE).map(gaf => (
+                                    <option key={gaf} value={gaf}>{gaf}</option>
+                                ))}
+                            </select>
+                        )}
 
-                        {/* מחלקה (תלוי בגף) */}
-                        <select 
-                            name="department" 
-                            onChange={onChange} 
-                            required 
-                            value={formData.department}
-                            disabled={!formData.gaf}
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 disabled:opacity-50 focus:border-cyan-400 focus:outline-none transition"
-                        >
-                            <option value="">{formData.gaf ? 'בחר מחלקה:' : 'קודם בחר גף'}</option>
-                            {formData.gaf && ORG_STRUCTURE[formData.gaf].map(dept => (
-                                <option key={dept} value={dept}>{dept}</option>
-                            ))}
-                        </select>
+                        {/* תצוגת מחלקה */}
+                        {isRestrictedUser ? (
+                            // למשתמש מוגבל - נציג אינפוט רגיל ונעול
+                            <div className="relative">
+                                {/* תווית צפה מעל השדה */}
+                                <div className="absolute -top-2.5 right-2 bg-[#162b4d] px-1.5 text-xs font-bold text-cyan-400 z-10">
+                                    מחלקה
+                                </div>
+                                <input 
+                                    type="text" 
+                                    value={formData.department} 
+                                    disabled 
+                                    className="w-full px-4 py-3 bg-[#0e1a2b]/50 text-gray-300 rounded-lg border border-gray-600/50 cursor-not-allowed font-medium"
+                                />
+                            </div>
+                        ) : (
+                            // למנהל - נציג בחירה
+                            <select name="department" onChange={onChange} required value={formData.department} disabled={!formData.gaf}
+                                className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 disabled:opacity-50 focus:border-cyan-400 focus:outline-none"
+                            >
+                                <option value="">{formData.gaf ? 'בחר מחלקה:' : 'קודם בחר גף'}</option>
+                                {formData.gaf && ORG_STRUCTURE[formData.gaf]?.map(dept => (
+                                    <option key={dept} value={dept}>{dept}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
                     {/* תאריך בדיקה */}
@@ -245,8 +299,12 @@ const NewAssetModal = ({ onClose, onAssetCreated }) => {
                             onChange={onChange} 
                             required
                             style={{ colorScheme: 'dark' }}
-                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 focus:border-cyan-400 focus:outline-none transition cursor-pointer"
+                            className="w-full px-4 py-3 bg-[#0e1a2b] text-white rounded-lg border border-gray-600 focus:border-cyan-400 focus:outline-none cursor-pointer"
                         />
+                         <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                            <span className="text-cyan-500">*</span>
+                            שימו לב: פורמט התאריך (יום/חודש) מוצג בהתאם להגדרות המחשב שלכם.
+                        </p>
                     </div>
                     
                     {/* כפתורים */}

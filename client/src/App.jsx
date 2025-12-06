@@ -6,8 +6,10 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Items from './pages/Items';
 import Settings from './pages/Settings'; 
-import Alert from './pages/Alert';
-import Rules from './pages/Rules'; // הייבוא של דף הכללים
+import Rules from './pages/Rules'; 
+
+// --- השינוי כאן: ייבוא הדשבורד החדש במקום Alert ---
+import Dashboard from './pages/Dashboard'; 
 
 // ייבוא ה-MainLayout מהתיקייה הראשית
 import MainLayout from './MainLayout'; 
@@ -19,15 +21,17 @@ function App() {
         {/* 1. דף התחברות (ללא Layout, מסך מלא) */}
         <Route path="/login" element={<Login />} />
 
-        {/* 2. כל שאר הדפים (עטופים בתוך MainLayout כדי שיהיה להם תפריט צדדי) */}
+        {/* 2. כל שאר הדפים (עטופים בתוך MainLayout) */}
         <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/items" element={<Items />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/alerts" element={<Alert />} />
-            
-            {/* כאן הוספתי את הנתיב לדף הכללים בצורה הנכונה: */}
             <Route path="/rules" element={<Rules />} />
+            
+            {/* --- השינוי כאן: הוספנו את הנתיב לדף הגרפי --- */}
+            {/* שים לב שהנתיב /dashboard חייב להיות זהה למה שכתבנו ב-Sidebar */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            
         </Route>
 
       </Routes>

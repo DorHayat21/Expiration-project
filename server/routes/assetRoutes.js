@@ -1,22 +1,24 @@
 import express from 'express';
-// עליך לייבא את updateAsset למרות שאינו בשימוש
+// וודא שהפונקציה updateAsset מיובאת כאן
 import { createAsset, getAssets, updateAsset, deleteAsset, deleteAllAssets } from '../controllers/assetController.js'; 
 import { protect, restrictTo } from '../middleware/authMiddleware.js'; 
 
 const router = express.Router();
 
-// 1. Base routes: /api/assets (Plural endpoint)
+// 1. Base routes: /api/assets
 router.route('/')
-    .get(protect, getAssets) // GET: Restricted view based on role
-    .post(protect, createAsset); // POST: Any logged-in user can create a new asset
+    .get(protect, getAssets) 
+    .post(protect, createAsset); 
 
-// 2. Cleanup Route: /api/assets/admin/cleanup (Admin only, safer placement)
+// 2. Cleanup Route: /api/assets/admin/cleanup (Admin only)
 router.route('/admin/cleanup')
-    .delete(protect, restrictTo('Admin'), deleteAllAssets);
+    .delete(protect, restrictTo('Admin'), deleteAllAssets);
 
-// 3. Detail routes: /api/assets/:id (Singular endpoint)
+// 3. Detail routes: /api/assets/:id
 router.route('/:id')
-
-    .delete(protect, restrictTo('Admin'), deleteAsset); // DELETE: Single asset deletion
-
+    // --- התיקון כאן: הוספנו את ה-put לעדכון ---
+    .put(protect, updateAsset) 
+    // ----------------------------------------
+    .delete(protect, deleteAsset); 
+    
 export default router;

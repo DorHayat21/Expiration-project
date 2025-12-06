@@ -1,32 +1,36 @@
 import mongoose from 'mongoose';
 
-// Definition of the User Schema
 const UserSchema = new mongoose.Schema({
     email: {
         type: String,
         required: [true, 'Email address is required'],
-        unique: true, // Ensures every email is unique
-        trim: true, // Removes leading/trailing whitespace
-        lowercase: true, // Stores all emails in lowercase
+        unique: true,
+        trim: true,
+        lowercase: true,
     },
     password: {
         type: String,
         required: [true, 'Password is required'],
-        // Note: The password will be hashed (encrypted) before saving to the DB.
     },
     role: {
         type: String,
-        // Enforcing the three user types as defined in the project requirements
-        enum: ['Admin', 'SuperViewer', 'User'],
+        enum: ['Admin', 'SuperViewer', 'User'], // Admin=מנהל על, SuperViewer=מפקד גף, User=מפקד מחלקה
         default: 'User',
         required: true,
     },
+    // --- שדות חדשים להיררכיה ---
+    gaf: {
+        type: String, 
+        default: '' // למנהל מערכת זה יישאר ריק
+    },
+    department: {
+        type: String,
+        default: '' // למפקד גף זה יישאר ריק
+    }
 }, {
-    // Mongoose will automatically add 'createdAt' and 'updatedAt' fields
     timestamps: true 
 });
 
-// Create and export the model
 const User = mongoose.model('User', UserSchema);
 
 export default User;

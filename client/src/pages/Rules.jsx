@@ -104,7 +104,7 @@ const Rules = () => {
                         <div className="bg-slate-800/80 p-5 rounded-xl">
                             <div className="text-4xl mb-3">✍️</div>
                             <h3 className="text-white font-bold mb-2">חידוש ועדכון</h3>
-                            <p className="text-slate-400 text-sm">ביצעת בדיקה? חידשת ציוד? חובה למחוק את הפריט הישן וליצור חדש עם התאריך המעודכן.</p>
+                            <p className="text-slate-400 text-sm">ביצעת בדיקה או חידוש ציוד? ניתן למחוק פריט שאינו רלוונטי יותר או לעדכן בו את תאריך הבדיקה האחרון</p>
                         </div>
 
                         <div className="bg-slate-800/80 p-5 rounded-xl">
